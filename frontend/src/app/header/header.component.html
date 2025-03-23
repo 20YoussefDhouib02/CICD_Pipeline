@@ -1,0 +1,71 @@
+
+<header>
+  <nav>
+    <a routerLink="/" class="logo">SKILLWAY</a>
+    <ul class="navbar">
+      <li><a routerLink="/">Home </a></li>
+      <li class="dropdown">
+        <a href="#">Roadmaps ▼</a>
+        <ul class="dropdown-content">
+          <li><a href="/roadmap/frontend/14">Front-End</a></li>
+          <li><a href="/roadmap/backend/6">Back-End</a></li>
+          <li><a href="/roadmap/cyber-security/9">Cybersecurity</a></li>
+          <li><a routerLink="/roadmaps">See More</a></li>
+        </ul>
+      </li>
+      <li class="dropdown">
+        <a href="#">Services ▼</a>
+        <ul class="dropdown-content">
+          <li><a [routerLink]="['/favorites']">Bookmark Roadmaps</a></li>
+          <li><a [routerLink]="['/track-way']">Track Progress</a></li>
+          <li><a [routerLink]="['/ai-skill']">AI Skill</a></li>
+        </ul>
+      </li>
+      <li><a href="#footer">Contact Us</a></li>
+    </ul>
+   
+    <div class="user-container" *ngIf="username" (click)="toggleMenu()">
+      <img *ngIf="profilePicture; else defaultImage" [src]="profilePicture" class="user-pic" >
+      
+      <ng-template #defaultImage>
+        <img [src]="'https://avatar.iran.liara.run/public/boy?username=username'" class="user-pic" >
+      </ng-template>
+      
+      <span class="username">{{ username }}</span>
+    </div>
+
+    <div class="sub-menu-wrap" id="sub-menu" #submenu>
+  <div class="sub-menu">
+    <div class="user-info">
+      <img *ngIf="username && profilePicture; else defaultImage" [src]="profilePicture" class="user-pic" (click)="toggleMenu()">
+
+<ng-template #defaultImage>
+  <img *ngIf="username" src="https://avatar.iran.liara.run/public/boy?username=username" class="user-pic" (click)="toggleMenu()">
+</ng-template>
+      <h2>{{username}}</h2>
+    </div>
+    <hr>
+    <a class="sub-menu-link">
+      <i class="fa-solid fa-gear"></i>        
+          <p (click)="navigateToProfile()">Edit Profile</p>
+          <i class="arrow" class="fa-solid fa-chevron-right"></i>  
+          </a>
+    <a class="sub-menu-link" [routerLink]="['/favorites']" style="color:black">
+      <i class="fa-solid fa-star"></i>      <p> Fav Roadmaps</p>
+      <i class="arrow" class="fa-solid fa-chevron-right"></i>    </a>
+    <a class="sub-menu-link">
+      <i class="fa-solid fa-right-from-bracket"></i>      
+      <p (click)="logout()">Logout</p>
+      <i class="arrow" class="fa-solid fa-chevron-right"></i>    </a>
+  </div>
+</div>
+
+
+
+      <div *ngIf="username == null" class="auth-buttons" >
+        <a routerLink="/signup">Sign Up</a>
+        <a routerLink="/login">Login</a>
+      </div>
+  
+  </nav>
+</header>
