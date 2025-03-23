@@ -16,10 +16,12 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - my-network
+      - my-network  # Connect to the custom network
 
   springboot-app:
-    build: .
+    build:
+      context: ./backend        # Use the backend folder as the build context
+      dockerfile: Dockerfile      # Explicitly specify the Dockerfile (default name)
     image: mahdi1/springboot-app:latest
     container_name: springboot-app
     depends_on:
@@ -32,7 +34,7 @@ services:
       - "8081:8081"
     restart: always
     networks:
-      - my-network
+      - my-network  # Connect to the custom network
 
   prometheus:
     image: prom/prometheus:latest
@@ -43,7 +45,7 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - my-network
+      - my-network  # Connect to the custom network
 
   grafana:
     image: grafana/grafana:latest
@@ -54,7 +56,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
-      - my-network
+      - my-network  # Connect to the custom network
 
 volumes:
   mysql_data:
@@ -62,4 +64,4 @@ volumes:
 
 networks:
   my-network:
-    driver: bridge
+    driver: bridge  # Default bridge network
