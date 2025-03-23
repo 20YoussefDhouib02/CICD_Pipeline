@@ -17,7 +17,9 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
   springboot-app:
-    build: .
+    build:
+      context: ./backend        # Use the backend folder as the build context
+      dockerfile: Dockerfile      # Explicitly specify the Dockerfile (default name)
     image: mahdi1/springboot-app:latest
     container_name: springboot-app
     depends_on:
