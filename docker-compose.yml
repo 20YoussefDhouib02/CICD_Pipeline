@@ -15,11 +15,11 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - my-network
 
   springboot-app:
-    build:
-      context: ./backend        # Use the backend folder as the build context
-      dockerfile: Dockerfile      # Explicitly specify the Dockerfile (default name)
+    build: .
     image: mahdi1/springboot-app:latest
     container_name: springboot-app
     depends_on:
@@ -31,6 +31,8 @@ services:
     ports:
       - "8081:8081"
     restart: always
+    networks:
+      - my-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -40,6 +42,8 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    networks:
+      - my-network
 
   grafana:
     image: grafana/grafana:latest
@@ -49,7 +53,13 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    networks:
+      - my-network
 
 volumes:
   mysql_data:
   grafana_data:
+
+networks:
+  my-network:
+    driver: bridge
