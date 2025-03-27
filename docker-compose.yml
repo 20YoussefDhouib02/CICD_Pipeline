@@ -8,8 +8,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: 0000
       MYSQL_DATABASE: roadmap
-      MYSQL_USER: root
-      MYSQL_PASSWORD: 0000
     ports:
       - "3306:3306"
     volumes:
