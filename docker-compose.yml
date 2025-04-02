@@ -40,11 +40,17 @@ services:
     restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus  # Persistent storage for metrics
     ports:
       - "9090:9090"
     networks:
       - my-network  # Connect to the custom network
-
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--log.level=info"  # Adjust log level (debug, info, warn, error)
+      - "--web.enable-lifecycle"  # Enable API reload without restarting
+  
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -59,6 +65,8 @@ services:
 volumes:
   mysql_data:
   grafana_data:
+  prometheus_data:
+    driver: local  # Ensures persistent storage
 
 networks:
   my-network:
