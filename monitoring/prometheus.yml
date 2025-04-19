@@ -10,15 +10,18 @@ alerting:
     - static_configs:
         - targets: ['alertmanager:9093'] # Use the service name and internal port defined in docker-compose
 
-# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
-
-# Your scrape configurations remain the same
+# Your scrape configurations
 scrape_configs:
   - job_name: 'springboot-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
       # Use the service name and internal port defined in docker-compose
       - targets: ['springboot-app:8081']
+
+  # New scrape job for Pushgateway
+  - job_name: 'pushgateway'
+    static_configs:
+      - targets: ['localhost:9091']
 
   # Optional: Add a scrape job for Prometheus itself
   # - job_name: 'prometheus'

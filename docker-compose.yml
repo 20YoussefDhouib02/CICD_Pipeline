@@ -18,14 +18,14 @@ services:
 
   springboot-app:
     build:
-      context: ./backend        # Use the backend folder as the build context
-      dockerfile: Dockerfile      # Explicitly specify the Dockerfile (default name)
+      context: ./backend
+      dockerfile: Dockerfile
     image: mahdi1/springboot-app:latest
     container_name: springboot-app
     depends_on:
       - mysql
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap # Use service name 'mysql' for connection
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: 0000
     ports:
@@ -40,7 +40,7 @@ services:
     restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml # Added alert rules volume
+      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -52,7 +52,7 @@ services:
       - "--log.level=info"
       - "--web.enable-lifecycle"
 
-  alertmanager:                 # Added Alertmanager service from image
+  alertmanager:
     image: prom/alertmanager:latest
     container_name: alertmanager
     restart: always
@@ -74,6 +74,15 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+    networks:
+      - my-network
+
+  pushgateway:  # Added Pushgateway service
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    restart: always
+    ports:
+      - "9091:9091"
     networks:
       - my-network
 
