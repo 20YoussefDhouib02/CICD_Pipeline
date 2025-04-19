@@ -14,7 +14,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - my-network  # Connect to the custom network
+      - my-network
 
   springboot-app:
     build:
@@ -25,14 +25,14 @@ services:
     depends_on:
       - mysql
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap # Use service name 'mysql' for connection
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: 0000
     ports:
       - "8081:8081"
     restart: always
     networks:
-      - my-network  # Connect to the custom network
+      - my-network
 
   prometheus:
     image: prom/prometheus:latest
@@ -40,17 +40,32 @@ services:
     restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus  # Persistent storage for metrics
+      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml # Added alert rules volume
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
     networks:
-      - my-network  # Connect to the custom network
+      - my-network
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-      - "--log.level=info"  # Adjust log level (debug, info, warn, error)
-      - "--web.enable-lifecycle"  # Enable API reload without restarting
-  
+      - "--log.level=info"
+      - "--web.enable-lifecycle"
+
+  alertmanager:                 # Added Alertmanager service from image
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    networks:
+      - my-network
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--log.level=info"
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -60,14 +75,14 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
-      - my-network  # Connect to the custom network
+      - my-network
 
 volumes:
   mysql_data:
   grafana_data:
   prometheus_data:
-    driver: local  # Ensures persistent storage
+    driver: local
 
 networks:
   my-network:
-    driver: bridge  # Default bridge network
+    driver: bridge
