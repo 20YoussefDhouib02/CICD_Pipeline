@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Rollback Tool</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .flash-messages { list-style: none; padding: 0; }
+        .flash-messages li { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+        .flash-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .flash-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .flash-warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .flash-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .commit-list { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
+        .commit-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .commit-hash { font-family: monospace; font-size: 0.9em; color: #555; }
+        .commit-message { margin: 5px 0; }
+        .commit-meta { font-size: 0.8em; color: #777; }
+        form { margin-top: 20px; padding: 15px; border: 1px solid #eee; border-radius: 5px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: calc(100% - 22px); padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+         .current-head { background-color: #e9ecef; padding: 10px; border-radius: 5px; margin-bottom: 20px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GitHub Rollback Tool</h1>
+        <p>Operating on: <strong>{{ repo_name }}</strong> (Branch: <strong>{{ branch_name }}</strong>)</p>
+
+        <ul class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <li class="flash-{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </ul>
+
+        <div class="current-head">
+             <h2>Current HEAD</h2>
+             {% if current_head_commit %}
+                 <div class="commit-item">
+                     <div class="commit-hash">{{ current_head_commit.sha }}</div>
+                     <div class="commit-message">{{ current_head_commit.commit.message | truncate(80, True, '...') }}</div>
+                     <div class="commit-meta">
+                         Authored by {{ current_head_commit.commit.author.name }} on {{ current_head_commit.commit.author.date.strftime('%Y-%m-%d %H:%M') }}
+                     </div>
+                 </div>
+             {% else %}
+                  <p>Could not retrieve current HEAD commit information.</p>
+             {% endif %}
+        </div>
+
+
+        <h2>Rollback Options</h2>
+
+        <form action="{{ url_for('rollback') }}" method="post">
+            <input type="hidden" name="rollback_type" value="previous">
+            <button type="submit" {% if current_head_commit and not current_head_commit.parents %} disabled title="Initial commit has no parent"{% endif %}>Rollback to Previous Commit</button>
+             {% if current_head_commit and not current_head_commit.parents %}
+                 <p style="color:#777; font-size: 0.9em;">(Cannot rollback previous from initial commit)</p>
+             {% endif %}
+        </form>
+
+        <form action="{{ url_for('rollback') }}" method="post">
+             <input type="hidden" name="rollback_type" value="specific">
+             <label for="specific_commit_sha">Rollback to Specific Commit Hash:</label>
+             <input type="text" id="specific_commit_sha" name="specific_commit_sha" required placeholder="Enter full commit SHA">
+             <button type="submit">Rollback to this Commit</button>
+        </form>
+
+        <div class="commit-list">
+            <h2>Recent Commits (for reference)</h2>
+             {% if recent_commits %}
+                {% for commit in recent_commits %}
+                    <div class="commit-item">
+                        <div class="commit-hash">{{ commit.sha }}</div>
+                        <div class="commit-message">{{ commit.commit.message | truncate(80, True, '...') }}</div>
+                        <div class="commit-meta">
+                            Authored by {{ commit.commit.author.name }} on {{ commit.commit.author.date.strftime('%Y-%m-%d %H:%M') }}
+                        </div>
+                    </div>
+                {% endfor %}
+             {% else %}
+                 <p>Could not fetch recent commits.</p>
+             {% endif %}
+        </div>
+
+         <p><a href="{{ url_for('logout') }}">Logout</a></p>
+
+    </div>
+</body>
+</html>

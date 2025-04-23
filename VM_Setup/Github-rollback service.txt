@@ -1,0 +1,14 @@
+[Unit]
+Description=GitHub Rollback Application Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mahdi
+Group=mahdi
+WorkingDirectory=/home/mahdi/github-rollback-app
+ExecStart=/home/mahdi/prometheus-lstm-env/bin/python /home/mahdi/github-rollback-app/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

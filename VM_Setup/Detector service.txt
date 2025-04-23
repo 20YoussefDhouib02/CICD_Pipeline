@@ -1,0 +1,20 @@
+
+[Unit]
+Description=Anomaly Detector Script Runner
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=mahdi
+Group=mahdi
+WorkingDirectory=/home/mahdi
+Environment="SENDER_EMAIL=MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net"
+Environment="SENDER_PASSWORD=mssp.FJJsQap.ynrw7gyn0qo42k8e.DGbX8C5"
+Environment="SMTP_SERVER=smtp.mailersend.net"
+Environment="SMTP_PORT=587"
+# --- This is the corrected line ---
+ExecStart=/home/mahdi/prometheus-lstm-env/bin/python /home/mahdi/lstm_anomaly_detector_push.py
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
