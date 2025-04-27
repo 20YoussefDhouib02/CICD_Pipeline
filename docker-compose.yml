@@ -20,7 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: mahdi1/springboot-app:latest
+    image: mahdi1/springboot-app:latest # Consider using a specific version tag instead of latest
     container_name: springboot-app
     depends_on:
       - mysql
@@ -28,6 +28,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: 0000
+      # Example: Add Pushgateway URL if your app needs to push metrics
+      # PUSHGATEWAY_URL: http://pushgateway:9091
     ports:
       - "8081:8081"
     restart: always
@@ -35,12 +37,15 @@ services:
       - my-network
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:latest # Consider using a specific version tag
     container_name: prometheus
     restart: always
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml
+      # Mount main prometheus config (read-only is good practice)
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Mount alert rules file (read-only)
+      - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      # Persistent storage for Prometheus data
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -50,35 +55,56 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--log.level=info"
-      - "--web.enable-lifecycle"
+      - "--web.enable-lifecycle" # Allows hot-reloading config via API
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:latest # Consider using a specific version tag
     container_name: alertmanager
     restart: always
     ports:
       - "9093:9093"
     volumes:
-      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      # Mount main alertmanager config (read-only)
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      # --- ADDED VOLUME FOR SECRETS ---
+      # Mount the directory where Jenkins will place the secret files.
+      # Source path ('./secrets') is relative to the docker-compose file in the Jenkins workspace.
+      # Target path ('/etc/alertmanager/secrets') MUST match the parent directory
+      # of the file paths used in alertmanager.yml (auth_username_file, auth_password_file).
+      - ./secrets:/etc/alertmanager/secrets:ro # Mount as read-only
+      # Optional: Persistent storage for Alertmanager state (silences, etc.)
+      # - alertmanager_data:/alertmanager
     networks:
       - my-network
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--log.level=info"
+      # Optional: Define storage path if using persistent volume
+      # - "--storage.path=/alertmanager"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:latest # Consider using a specific version tag
     container_name: grafana
     restart: always
     ports:
       - "3000:3000"
     volumes:
+      # Persistent storage for Grafana data (dashboards, datasources, etc.)
       - grafana_data:/var/lib/grafana
+      # Optional: Mount custom Grafana configuration or provisioning files
+      # - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      # Optional: Set admin user/password, disable login form, etc.
+      # GF_SECURITY_ADMIN_USER: admin
+      # GF_SECURITY_ADMIN_PASSWORD: your_grafana_password
+      # GF_AUTH_ANONYMOUS_ENABLED: true
+      # GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      pass: # Add your Grafana admin password here or use environment variables/secrets
     networks:
       - my-network
 
-  pushgateway:  # Added Pushgateway service
-    image: prom/pushgateway:latest
+  pushgateway:
+    image: prom/pushgateway:latest # Consider using a specific version tag
     container_name: pushgateway
     restart: always
     ports:
@@ -90,7 +116,7 @@ volumes:
   mysql_data:
   grafana_data:
   prometheus_data:
-    driver: local
+  # alertmanager_data: # Uncomment if you add the alertmanager data volume
 
 networks:
   my-network:
