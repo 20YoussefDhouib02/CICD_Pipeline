@@ -40,7 +40,7 @@ services:
     restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/alert-rules.yml:/etc/prometheus/alert-rules.yml
+      - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
