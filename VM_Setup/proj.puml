@@ -8,6 +8,7 @@ package "Monitoring" {
     - stages: List«PipelineStage»
     + collectMetrics() : void
     + evaluatePipeline() : void
+    
   }
 
   class Metric {
