@@ -1,0 +1,12 @@
+[Unit]
+ Description=Run Anomaly Detector Script every 30 minutes after initial delay
+ Requires=anomaly_detector.service
+ 
+ [Timer]
+ Unit=anomaly_detector.service
+ OnBootSec=1h
+ OnUnitActiveSec=30m
+ AccuracySec=1m
+ 
+ [Install]
+ WantedBy=timers.target
