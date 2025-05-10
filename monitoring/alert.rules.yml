@@ -12,9 +12,6 @@ groups:
           summary: "Instance {{ $labels.instance }} down"
           description: "{{ $labels.job }} instance {{ $labels.instance }} has been down for more than 5 minutes."
 
-      # --- Anomaly Detection Alerts ---
-      # IMPORTANT: Adjust the thresholds ('> 0.5', '> 2', '< 1') based on your specific
-      # application's normal performance characteristics! Analyze metrics first.
 
       - alert: HighAverageHttpRequestLatency
         # Average latency over 5m > 0.5 seconds
@@ -56,10 +53,3 @@ groups:
         annotations:
           summary: "Low HTTP request rate for {{ $labels.job }} ({{ $labels.instance }})"
           description: "Request rate is {{ $value | printf \"%.2f\" }} req/s (threshold < 1 req/s) for job {{ $labels.job }} instance {{ $labels.instance }} for the last 7 minutes. Is the service healthy or receiving traffic?"
-
-      # Potential addition: Error Rate Alert (requires metrics with status code)
-      # - alert: HighHttpErrorRate
-      #   expr: ( sum(rate(http_server_requests_seconds_count{job=~".+", status=~"5.."}[5m])) by (job, instance) / sum(rate(http_server_requests_seconds_count{job=~".+"}[5m])) by (job, instance) ) * 100 > 5 # Adjust percentage
-      #   for: 7m
-      #   labels: { severity: critical }
-      #   annotations: { summary: "High HTTP 5xx error rate...", description: "Error rate is {{ $value }}%..." }
