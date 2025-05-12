@@ -1,6 +1,5 @@
 global:
   resolve_timeout: 5m
-  # Global SMTP settings removed as secrets are handled per-receiver via files.
 
 route:
   # Group alerts primarily by alertname and job.
@@ -14,37 +13,16 @@ route:
   group_interval: 5m
   repeat_interval: 4h
 
-  # Example route comments kept for reference.
-  # routes:
-  #  - receiver: 'critical-alerts-pager'
-  #    matchers:
-  #      - severity = "critical"
-  #    continue: true
-  #  - receiver: 'team-b-slack'
-  #    matchers:
-  #      - team = "b"
-
 receivers:
   # Receiver configuration for sending emails to mahdi.bouafif@gmail.com
   - name: 'email-mahdi'
     email_configs:
       - to: 'mahdi.bouafif@gmail.com'
-        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net' # 'From' address is usually not secret.
-        smarthost: 'smtp.mailersend.net:587' # Use 587 or 2525 if 587 fails.
+        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net' 
+        smarthost: 'smtp.mailersend.net:587'
 
-        # --- Reading Secrets from Files ---
-        # These files will be created by Jenkins (using credentials) and mounted
-        # into the container at runtime via docker-compose volumes.
-        # The paths specified here MUST match the target paths in docker-compose volumes.
         auth_username_file: /etc/alertmanager/secrets/smtp_username
         auth_password_file: /etc/alertmanager/secrets/smtp_password
 
-        # Use TLS encryption (required for STARTTLS on port 587).
+        # Use TLS encryption 
         require_tls: true
-
-        # Optional: Customize email subject/body using templates.
-        # headers:
-        #   Subject: '[ALERT] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}'
-        # html: '{{ template "email.default.html" . }}'
-
-# You might have other receivers defined below.

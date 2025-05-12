@@ -1,22 +1,15 @@
 global:
   scrape_interval: 15s
-  # Optional: How frequently to evaluate rules. Defaults to the global scrape_interval.
-  # evaluation_interval: 15s
-
-# Load alerting rules from the specified file(s)
-# Prometheus will look for 'alert.rules.yml' in the same directory
-# where it found this 'prometheus.yml' file.
 
 rule_files:
   - "/etc/prometheus/alert.rules.yml"
 
 # Alertmanager configuration
-# Tells Prometheus where to send alerts
+
 alerting:
   alertmanagers:
     - static_configs:
-        # Use the service name 'alertmanager' and its internal port (9093)
-        # This should match the service name in your docker-compose.yml
+
         - targets: ['alertmanager:9093']
 
 # Your scrape configurations
@@ -24,29 +17,18 @@ scrape_configs:
   - job_name: 'springboot-app'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      # Use the service name 'springboot-app' and its internal port (8081)
-      # This should match the service name in your docker-compose.yml
+
       - targets: ['springboot-app:8081']
 
   # Scrape job for Pushgateway
   - job_name: 'pushgateway'
-    # Keep original labels from pushed metrics
     honor_labels: true
     static_configs:
-      # Use the service name 'pushgateway' and its internal port (9091)
-      # This should match the service name in your docker-compose.yml
+
       - targets: ['pushgateway:9091']
 
-  # Optional but recommended: Add a scrape job for Prometheus itself
+  # Add a scrape job for Prometheus itself
   - job_name: 'prometheus'
     static_configs:
-      # Prometheus runs on port 9090 by default
+
       - targets: ['localhost:9090']
-
-  # Optional: Add a scrape job for Alertmanager itself (good for monitoring)
-  # - job_name: 'alertmanager'
-  #   static_configs:
-  #     # Use the service name 'alertmanager' and its internal port (9093)
-  #     - targets: ['alertmanager:9093']
-
-# --- (rest of your file, if any) ---

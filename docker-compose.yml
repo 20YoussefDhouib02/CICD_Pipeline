@@ -19,10 +19,6 @@ services:
       - my-network
 
   springboot-app:
-    # The 'build' section tells Docker Compose how to build the image.
-    # The 'image' tag specifies the name and tag for the built image.
-    # Jenkins pipeline already builds and pushes mahdi1/springboot-app:latest,
-    # so 'docker-compose up' will use the image built by Jenkins.
     build:
       context: ./backend # Assumes 'backend' directory is relative to docker-compose.yml
       dockerfile: Dockerfile
@@ -68,18 +64,14 @@ services:
       - "9093:9093"
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      # This volume mounts the secrets directory created by Jenkins into the container.
-      # Ensure your alertmanager.yml references files like:
-      #   smtp_auth_username_file: '/etc/alertmanager/secrets/smtp_username'
-      #   smtp_auth_password_file: '/etc/alertmanager/secrets/smtp_password'
       - ./secrets:/etc/alertmanager/secrets:ro
-      - alertmanager_data:/alertmanager # Uncomment if you want to persist Alertmanager state (silences, etc.)
+      - alertmanager_data:/alertmanager
     networks:
       - my-network
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--log.level=info"
-      - "--storage.path=/alertmanager" # Corresponds to the alertmanager_data volume if enabled
+      - "--storage.path=/alertmanager"
 
   grafana:
     image: grafana/grafana:10.4.1 # Pinned to a specific version for stability (example, check latest stable)
@@ -91,12 +83,12 @@ services:
       - grafana_data:/var/lib/grafana
       # - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     environment:
-      # WARNING: Set a strong admin password.
-      # Consider injecting this via Jenkins or using Docker secrets for better security.
-      GF_SECURITY_ADMIN_USER: admin # Default admin user
-      GF_SECURITY_ADMIN_PASSWORD: your_strong_grafana_password_here # FIXME: Change this password!
+      # Optional: Set admin user/password, disable login form, etc.
+      # GF_SECURITY_ADMIN_USER: admin
+      # GF_SECURITY_ADMIN_PASSWORD: your_grafana_password
       # GF_AUTH_ANONYMOUS_ENABLED: true
       # GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      pass: # Add your Grafana admin password here or use environment variables/secrets
     networks:
       - my-network
 
@@ -113,7 +105,7 @@ volumes:
   mysql_data:
   grafana_data:
   prometheus_data:
-  alertmanager_data: # Define the volume if you uncomment its usage in the alertmanager service
+  alertmanager_data:
 
 networks:
   my-network:
