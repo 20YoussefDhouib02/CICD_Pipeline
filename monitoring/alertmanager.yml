@@ -1,6 +1,11 @@
 global:
   resolve_timeout: 5m
-  # No global SMTP settings, as they are defined per receiver.
+  # If you have global SMTP settings that apply to all email receivers,
+  # define them here with the 'smtp_' prefix.
+  # Example:
+  # smtp_smarthost: 'smtp.example.com:587'
+  # smtp_from: 'alertmanager@example.com'
+  # smtp_require_tls: true
 
 route:
   group_by: ['alertname', 'job']
@@ -12,18 +17,20 @@ route:
 receivers:
   - name: 'email-mahdi'
     email_configs:
-      - to: 'mahdi.bouafif@gmail.com'
-        # These all need the smtp_ prefix when defined within email_configs
-        smtp_from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
-        smtp_smarthost: 'smtp.mailersend.net:587'
+      - to: 'mahdi.bouafif@gmail.com' # This is a property of the email_config item
 
-        # --- CORRECTED Secret File Paths ---
-        smtp_auth_username_file: /etc/alertmanager/secrets/smtp_username
-        smtp_auth_password_file: /etc/alertmanager/secrets/smtp_password
-        # smtp_auth_identity: if needed
-        # smtp_auth_secret: if password was plain text (not recommended)
+        # These are also properties of THIS email_config item, at the same indentation level as 'to'.
+        # They override or specify settings for this particular email notification.
+        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
+        smarthost: 'smtp.mailersend.net:587'
 
-        smtp_require_tls: true
+        # Secret file paths
+        auth_username_file: /etc/alertmanager/secrets/smtp_username
+        auth_password_file: /etc/alertmanager/secrets/smtp_password
+        # auth_identity: if needed for your SMTP provider
+
+        # TLS setting for this email_config
+        require_tls: true # Defaults to global.smtp_require_tls if not set, which itself defaults to true.
 
         # Optional: Customize email subject/body using templates.
         # headers:
