@@ -1,38 +1,46 @@
 global:
   resolve_timeout: 5m
-  # If you have global SMTP settings that apply to all email receivers,
-  # define them here with the 'smtp_' prefix.
-  # Example:
-  # smtp_smarthost: 'smtp.example.com:587'
-  # smtp_from: 'alertmanager@example.com'
-  # smtp_require_tls: true
+
+  # Global SMTP settings
+  # These settings will be used by default for all email receivers unless overridden.
+  smtp_from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
+  smtp_smarthost: 'smtp.mailersend.net:587'
+
+  # Use files for SMTP authentication credentials.
+  # These files are created by your Jenkins pipeline and mounted into the
+  # Alertmanager container at /etc/alertmanager/secrets/.
+  smtp_auth_username_file: /etc/alertmanager/secrets/smtp_username
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp_password
+  # smtp_auth_identity: if needed for your SMTP provider (usually not for username/password)
+  # smtp_auth_secret: if using a different auth mechanism
+
+  # Require TLS for SMTP connections. Defaults to true if not specified.
+  smtp_require_tls: true
 
 route:
   group_by: ['alertname', 'job']
   receiver: 'email-mahdi'
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 4h
+  group_wait: 30s           # How long to initially wait to buffer alerts of the same group.
+  group_interval: 5m        # How long to wait before sending a notification about new alerts for a group.
+  repeat_interval: 4h       # How long to wait before re-sending a notification for an unresolved alert.
 
 receivers:
   - name: 'email-mahdi'
     email_configs:
-      - to: 'mahdi.bouafif@gmail.com' # This is a property of the email_config item
-
-        # These are also properties of THIS email_config item, at the same indentation level as 'to'.
-        # They override or specify settings for this particular email notification.
-        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
-        smarthost: 'smtp.mailersend.net:587'
-
-        # Secret file paths
-        auth_username_file: /etc/alertmanager/secrets/smtp_username
-        auth_password_file: /etc/alertmanager/secrets/smtp_password
-        # auth_identity: if needed for your SMTP provider
-
-        # TLS setting for this email_config
-        require_tls: true # Defaults to global.smtp_require_tls if not set, which itself defaults to true.
+      - to: 'mahdi.bouafif@gmail.com'
+        # This receiver will inherit SMTP settings (from, smarthost, auth, require_tls)
+        # from the 'global' section.
+        # If you needed to override 'from', 'smarthost', or 'require_tls' for this specific
+        # receiver, you could specify them here.
+        # For overriding authentication, you would use 'auth_username: "user"' and
+        # 'auth_password: "password"' (not the _file variants).
 
         # Optional: Customize email subject/body using templates.
         # headers:
-        #   Subject: '[ALERT] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}'
+        #   Subject: '[ALERT] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }} [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}]'
         # html: '{{ template "email.default.html" . }}'
+        # text: '{{ template "email.default.text" . }}'
+
+# Optional: Define custom notification templates
+# templates:
+#  - '/etc/alertmanager/templates/*.tmpl'
