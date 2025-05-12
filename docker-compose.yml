@@ -2,10 +2,12 @@ version: "3.8"
 
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:8.0 # Consider pinning to a more specific version like mysql:8.0.36 for stability
     container_name: mysql-db
     restart: always
     environment:
+      # WARNING: Default passwords like '0000' are insecure.
+      # For production or sensitive environments, use Docker secrets or inject via environment variables at runtime.
       MYSQL_ROOT_PASSWORD: 0000
       MYSQL_DATABASE: roadmap
     ports:
@@ -18,18 +20,18 @@ services:
 
   springboot-app:
     build:
-      context: ./backend
+      context: ./backend # Assumes 'backend' directory is relative to docker-compose.yml
       dockerfile: Dockerfile
-    image: mahdi1/springboot-app:latest # Consider using a specific version tag instead of latest
+    image: mahdi1/springboot-app:latest # This will be the image built and tagged by Jenkins
     container_name: springboot-app
     depends_on:
       - mysql
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap
       SPRING_DATASOURCE_USERNAME: root
+      # WARNING: Default passwords like '0000' are insecure.
       SPRING_DATASOURCE_PASSWORD: 0000
-      # Example: Add Pushgateway URL if your app needs to push metrics
-      # PUSHGATEWAY_URL: http://pushgateway:9091
+      # PUSHGATEWAY_URL: http://pushgateway:9091 # Uncomment if your app pushes metrics
     ports:
       - "8081:8081"
     restart: always
@@ -37,15 +39,12 @@ services:
       - my-network
 
   prometheus:
-    image: prom/prometheus:latest # Consider using a specific version tag
+    image: prom/prometheus:v2.49.1 # Pinned to a specific version for stability (example, check latest stable)
     container_name: prometheus
     restart: always
     volumes:
-      # Mount main prometheus config (read-only is good practice)
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      # Mount alert rules file (read-only)
       - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
-      # Persistent storage for Prometheus data
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -55,43 +54,33 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--log.level=info"
-      - "--web.enable-lifecycle" # Allows hot-reloading config via API
+      - "--web.enable-lifecycle"
 
   alertmanager:
-    image: prom/alertmanager:latest # Consider using a specific version tag
+    image: prom/alertmanager:v0.27.0 # Pinned to a specific version for stability (example, check latest stable)
     container_name: alertmanager
     restart: always
     ports:
       - "9093:9093"
     volumes:
-      # Mount main alertmanager config (read-only)
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      # --- ADDED VOLUME FOR SECRETS ---
-      # Mount the directory where Jenkins will place the secret files.
-      # Source path ('./secrets') is relative to the docker-compose file in the Jenkins workspace.
-      # Target path ('/etc/alertmanager/secrets') MUST match the parent directory
-      # of the file paths used in alertmanager.yml (auth_username_file, auth_password_file).
-      - ./secrets:/etc/alertmanager/secrets:ro # Mount as read-only
-      # Optional: Persistent storage for Alertmanager state (silences, etc.)
-      # - alertmanager_data:/alertmanager
+      - ./secrets:/etc/alertmanager/secrets:ro
+      - alertmanager_data:/alertmanager
     networks:
       - my-network
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--log.level=info"
-      # Optional: Define storage path if using persistent volume
-      # - "--storage.path=/alertmanager"
+      - "--storage.path=/alertmanager"
 
   grafana:
-    image: grafana/grafana:latest # Consider using a specific version tag
+    image: grafana/grafana:10.4.1 # Pinned to a specific version for stability (example, check latest stable)
     container_name: grafana
     restart: always
     ports:
       - "3000:3000"
     volumes:
-      # Persistent storage for Grafana data (dashboards, datasources, etc.)
       - grafana_data:/var/lib/grafana
-      # Optional: Mount custom Grafana configuration or provisioning files
       # - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     environment:
       # Optional: Set admin user/password, disable login form, etc.
@@ -104,7 +93,7 @@ services:
       - my-network
 
   pushgateway:
-    image: prom/pushgateway:latest # Consider using a specific version tag
+    image: prom/pushgateway:v1.8.0 # Pinned to a specific version for stability (example, check latest stable)
     container_name: pushgateway
     restart: always
     ports:
@@ -116,7 +105,7 @@ volumes:
   mysql_data:
   grafana_data:
   prometheus_data:
-  # alertmanager_data: # Uncomment if you add the alertmanager data volume
+  alertmanager_data:
 
 networks:
   my-network:

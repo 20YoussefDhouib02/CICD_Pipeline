@@ -1,50 +1,38 @@
 global:
   resolve_timeout: 5m
-  # Global SMTP settings removed as secrets are handled per-receiver via files.
+  # If you have global SMTP settings that apply to all email receivers,
+  # define them here with the 'smtp_' prefix.
+  # Example:
+  # smtp_smarthost: 'smtp.example.com:587'
+  # smtp_from: 'alertmanager@example.com'
+  # smtp_require_tls: true
 
 route:
-  # Group alerts primarily by alertname and job.
   group_by: ['alertname', 'job']
-
-  # Default receiver for all alerts.
   receiver: 'email-mahdi'
-
-  # Buffering and timing settings.
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
 
-  # Example route comments kept for reference.
-  # routes:
-  #  - receiver: 'critical-alerts-pager'
-  #    matchers:
-  #      - severity = "critical"
-  #    continue: true
-  #  - receiver: 'team-b-slack'
-  #    matchers:
-  #      - team = "b"
-
 receivers:
-  # Receiver configuration for sending emails to mahdi.bouafif@gmail.com
   - name: 'email-mahdi'
     email_configs:
-      - to: 'mahdi.bouafif@gmail.com'
-        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net' # 'From' address is usually not secret.
-        smarthost: 'smtp.mailersend.net:587' # Use 587 or 2525 if 587 fails.
+      - to: 'mahdi.bouafif@gmail.com' # This is a property of the email_config item
 
-        # --- Reading Secrets from Files ---
-        # These files will be created by Jenkins (using credentials) and mounted
-        # into the container at runtime via docker-compose volumes.
-        # The paths specified here MUST match the target paths in docker-compose volumes.
+        # These are also properties of THIS email_config item, at the same indentation level as 'to'.
+        # They override or specify settings for this particular email notification.
+        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
+        smarthost: 'smtp.mailersend.net:587'
+
+        # Secret file paths
         auth_username_file: /etc/alertmanager/secrets/smtp_username
         auth_password_file: /etc/alertmanager/secrets/smtp_password
+        # auth_identity: if needed for your SMTP provider
 
-        # Use TLS encryption (required for STARTTLS on port 587).
-        require_tls: true
+        # TLS setting for this email_config
+        require_tls: true # Defaults to global.smtp_require_tls if not set, which itself defaults to true.
 
         # Optional: Customize email subject/body using templates.
         # headers:
         #   Subject: '[ALERT] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}'
         # html: '{{ template "email.default.html" . }}'
-
-# You might have other receivers defined below.

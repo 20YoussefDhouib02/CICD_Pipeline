@@ -132,7 +132,7 @@ PLOT_OUTPUT_DIR = os.environ.get('PLOT_OUTPUT_DIR', 'anomaly_plots')
 SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.mailersend.net')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587)) # 587 is standard for TLS
 SMTP_USER = os.environ.get('SMTP_USER', 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'YOUR_PASSWORD_HERE') # Use secure storage for sensitive data
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', 'YOUR_PASSWORD') # Use secure storage for sensitive data
 EMAIL_SENDER = os.environ.get('EMAIL_SENDER', SMTP_USER) # Usually same as user for MailerSend
 
 # Hardcoding recipient as previously requested.
@@ -415,111 +415,147 @@ def set_combined_anomaly_metrics(gauge: Gauge, combined_anomalies: dict, job_nam
 
 
 # --- Email Alerting Logic ---
+import pandas as pd
+import logging
+from datetime import timezone
+from collections import defaultdict # Useful for aggregation
+
+logger = logging.getLogger(__name__) # Replace with your actual logger setup
 
 def identify_significant_anomalies_combined(
     combined_anomalies: dict[pd.Timestamp, list[str]],
     test_timestamps: pd.DatetimeIndex,
     min_models: int,
     enable_persistence: bool,
-    min_consecutive: int,
-    window_size: int,
-    min_in_window: int
+    min_consecutive: int,  # Now refers to consecutive *minutes* with anomalies
+    window_size: int,      # Now refers to a window of *minutes*
+    min_in_window: int     # Now refers to min *minutes* with anomalies in the window
 ) -> dict[pd.Timestamp, list[str]]:
     """
-    Filters combined anomalies based on consensus OR persistence rules.
+    Filters combined anomalies based on minute-level persistence AND consensus rules.
+
+    An anomaly timestamp is considered significant ONLY IF:
+    1. It belongs to a minute that is part of a sequence meeting a minute-level
+       persistence rule (consecutive minutes or window density of minutes).
+    2. The *last precise anomaly timestamp* within that triggering minute ALSO
+       meets the consensus criterion (>= min_models).
+
     Returns a dictionary containing only the significant anomalies {Timestamp: [models]}.
+    Keys are the precise timestamps identified.
     """
     significant_alerts = {}
-    if not combined_anomalies:
-        logger.info("No combined anomalies provided to check for significance.")
+    if not combined_anomalies or not enable_persistence:
+        if not enable_persistence:
+            logger.info("Persistence checks are disabled. No anomalies will be marked significant.")
+        else:
+            logger.info("No combined anomalies provided.")
         return significant_alerts
+    if test_timestamps.empty:
+        logger.warning("Persistence checks require non-empty test_timestamps.")
+        return significant_alerts # Cannot check persistence
 
-    # Ensure input dictionary keys and test_timestamps are UTC
+    # --- Timezone Standardization (same as before) ---
     try:
         combined_anomalies_utc = {ts.tz_convert('UTC') if ts.tz is not None else ts.tz_localize('UTC'): models
                                   for ts, models in combined_anomalies.items()}
-        if not test_timestamps.empty:
-            if test_timestamps.tz is None:
-                 logger.warning("Test timestamps were timezone-naive. Assuming UTC for persistence checks.")
-                 test_timestamps = test_timestamps.tz_localize('UTC')
-            elif test_timestamps.tz != timezone.utc:
-                logger.warning(f"Test timestamps had timezone {test_timestamps.tz}. Converting to UTC.")
-                test_timestamps = test_timestamps.tz_convert('UTC')
+        if test_timestamps.tz is None:
+            logger.warning("Test timestamps were timezone-naive. Assuming UTC for persistence checks.")
+            test_timestamps = test_timestamps.tz_localize('UTC')
+        elif test_timestamps.tz != timezone.utc:
+            logger.warning(f"Test timestamps had timezone {test_timestamps.tz}. Converting to UTC.")
+            test_timestamps = test_timestamps.tz_convert('UTC')
     except Exception as tz_err:
-         logger.error(f"Error standardizing timezones for significance check: {tz_err}. Skipping persistence check.", exc_info=True)
-         enable_persistence = False # Disable persistence if TZ conversion fails
-         combined_anomalies_utc = combined_anomalies # Use original dict for consensus check
+         logger.error(f"Error standardizing timezones: {tz_err}. Cannot proceed.", exc_info=True)
+         return significant_alerts
 
+    # --- Pre-process: Aggregate Anomalies per Minute ---
+    logger.info("Aggregating anomalies per minute...")
+    # minute_data structure: {minute_start_ts: (has_anomaly: bool, last_precise_ts: Timestamp | None, models_at_last_ts: list | None)}
+    minute_data = defaultdict(lambda: (False, None, None))
+    temp_minute_agg = defaultdict(list) # {minute_start: [(ts1, models1), (ts2, models2)...]}
 
-    logger.info(f"Identifying significant anomalies (Consensus >= {min_models} models OR Persistence rules enabled: {enable_persistence})...")
-
-    # Rule 1: Check Consensus
+    # Group anomalies by minute
     for ts, models in combined_anomalies_utc.items():
-        if len(set(models)) >= min_models: # Use set to count unique models
-            if ts not in significant_alerts: # Add if not already present (e.g., from persistence)
-                 significant_alerts[ts] = sorted(list(set(models))) # Store unique sorted models
-                 logger.debug(f"Significant anomaly by consensus: {ts} ({models})")
+        minute_start = ts.floor('min')
+        temp_minute_agg[minute_start].append((ts, models))
 
-    # Rule 2: Check Persistence (if enabled and test_timestamps available and long enough)
-    if enable_persistence and not test_timestamps.empty and len(test_timestamps) >= max(min_consecutive, window_size):
-        logger.info(f"Checking persistence rules (Consecutive >= {min_consecutive} OR Window >= {min_in_window}/{window_size})...")
-        anomalous_timestamps_set = set(combined_anomalies_utc.keys()) # Use UTC keys
-        consecutive_count = 0
-        # Use a deque for efficient window management if large windows/data expected
-        # from collections import deque
-        # window_indices = deque(maxlen=window_size)
-        window_indices = [] # Store indices of anomalies in the current window relative to test_timestamps
+    # Determine last anomaly and models for each minute that had anomalies
+    for minute_start, ts_models_list in temp_minute_agg.items():
+        ts_models_list.sort(key=lambda x: x[0]) # Sort by timestamp within the minute
+        last_ts, last_models = ts_models_list[-1]
+        minute_data[minute_start] = (True, last_ts, last_models)
 
-        for i, ts in enumerate(test_timestamps): # Iterate through ordered UTC test timestamps
-            is_anomalous_now = ts in anomalous_timestamps_set
+    # --- Generate Full Minute Index for the Period ---
+    if test_timestamps.empty: # Should have been caught earlier, but double check
+        logger.warning("Cannot generate minute index from empty test_timestamps.")
+        return significant_alerts
 
-            # --- Check Consecutive Rule ---
-            if is_anomalous_now:
-                consecutive_count += 1
-                # If rule met, mark the timestamp *at the end* of the sequence
-                if consecutive_count >= min_consecutive:
-                    triggering_ts = ts
-                    if triggering_ts not in significant_alerts:
-                        models_at_ts = combined_anomalies_utc.get(triggering_ts, ['unknown_persistence'])
-                        significant_alerts[triggering_ts] = sorted(list(set(models_at_ts)))
-                        logger.debug(f"Significant anomaly by persistence (consecutive): {triggering_ts} ({significant_alerts[triggering_ts]})")
-            else:
-                consecutive_count = 0 # Reset counter
+    # Ensure the minute range covers all potential test timestamps
+    analysis_start_minute = test_timestamps.min().floor('min')
+    analysis_end_minute = test_timestamps.max().floor('min')
+    # Include the end minute itself
+    minute_index = pd.date_range(start=analysis_start_minute, end=analysis_end_minute, freq='min', tz='UTC')
 
-            # --- Check Window Rule ---
-            # Remove indices from the window that are no longer within the lookback period
-            window_start_index = i - window_size + 1
-            window_indices = [idx for idx in window_indices if idx >= window_start_index]
+    logger.info(f"Generated minute index from {analysis_start_minute} to {analysis_end_minute} ({len(minute_index)} minutes).")
 
-            # Add current index if anomalous
-            if is_anomalous_now:
-                window_indices.append(i)
 
-            # Check if the number of anomalies in the window meets the threshold
-            if len(window_indices) >= min_in_window:
-                 # Mark the *current* timestamp as significant because the window ending here is dense enough
-                 triggering_ts_window = ts
-                 if triggering_ts_window not in significant_alerts:
-                     # Ensure the current timestamp was actually anomalous if rule is "X anomalies IN window"
-                     if is_anomalous_now:
-                          models_at_ts = combined_anomalies_utc.get(triggering_ts_window, ['unknown_persistence'])
-                          significant_alerts[triggering_ts_window] = sorted(list(set(models_at_ts)))
-                          logger.debug(f"Significant anomaly by persistence (window density): {triggering_ts_window} ({significant_alerts[triggering_ts_window]})")
+    # --- Minute-Level Persistence Checks ---
+    required_minutes = max(min_consecutive, window_size)
+    if len(minute_index) < required_minutes:
+         logger.warning(f"Persistence checks skipped: Not enough minutes ({len(minute_index)}) in the analysis range for rules (min_consecutive={min_consecutive}, window_size={window_size}).")
+         return significant_alerts
 
-    elif enable_persistence:
-        # Log why persistence was skipped
-        if test_timestamps.empty:
-             logger.warning("Persistence checks skipped: Test timestamps are empty.")
-        elif len(test_timestamps) < max(min_consecutive, window_size):
-             logger.warning(f"Persistence checks skipped: Not enough test timestamps ({len(test_timestamps)}) for rules (min_consecutive={min_consecutive}, window_size={window_size}).")
-        # The case where enable_persistence was set to False due to TZ error is handled above
+    logger.info(f"Checking minute-level persistence (Consecutive >= {min_consecutive} mins OR Window >= {min_in_window}/{window_size} mins) AND Consensus (>= {min_models} models)...")
 
+    consecutive_minute_count = 0
+    # Stores *indices* relative to minute_index for anomalous minutes in the window
+    window_minute_indices = []
+
+    for i, current_minute_start in enumerate(minute_index):
+        has_anomaly_this_minute, last_precise_ts, models_at_last_ts = minute_data[current_minute_start]
+
+        consensus_met_at_last_ts = False
+        unique_models = set()
+        if has_anomaly_this_minute and models_at_last_ts:
+            unique_models = set(models_at_last_ts)
+            consensus_met_at_last_ts = len(unique_models) >= min_models
+
+        # --- Check Consecutive Minute Rule ---
+        if has_anomaly_this_minute:
+            consecutive_minute_count += 1
+            if consecutive_minute_count >= min_consecutive:
+                # Check consensus for the representative timestamp of *this* minute
+                if consensus_met_at_last_ts:
+                    if last_precise_ts not in significant_alerts: # Use precise timestamp as key
+                        significant_alerts[last_precise_ts] = sorted(list(unique_models))
+                        logger.debug(f"Significant anomaly by Minute Persistence (Consecutive) AND Consensus: {last_precise_ts} (from minute {current_minute_start}, models {significant_alerts[last_precise_ts]})")
+                # else: logger.debug(f"Consecutive minute rule met at {current_minute_start}, but consensus not met at its last anomaly {last_precise_ts} ({len(unique_models)}<{min_models})")
+        else:
+            consecutive_minute_count = 0 # Reset counter
+
+        # --- Check Window Minute Rule ---
+        # Remove indices from the window that are no longer within the lookback period (in minutes)
+        window_start_index = i - window_size + 1
+        window_minute_indices = [idx for idx in window_minute_indices if idx >= window_start_index]
+
+        # Add current *minute index* if anomalous
+        if has_anomaly_this_minute:
+            window_minute_indices.append(i)
+
+        # Check if the number of *anomalous minutes* in the window meets the threshold
+        if len(window_minute_indices) >= min_in_window:
+             # Rule met for the window ending at this minute.
+             # Check consensus for the representative timestamp of *this* minute, only if this minute *itself* had an anomaly.
+             if has_anomaly_this_minute and consensus_met_at_last_ts:
+                 if last_precise_ts not in significant_alerts: # Use precise timestamp as key
+                      significant_alerts[last_precise_ts] = sorted(list(unique_models))
+                      logger.debug(f"Significant anomaly by Minute Persistence (Window Density) AND Consensus: {last_precise_ts} (from minute {current_minute_start}, models {significant_alerts[last_precise_ts]})")
+             #elif has_anomaly_this_minute: logger.debug(f"Window density rule met ending {current_minute_start}, but consensus not met at its last anomaly {last_precise_ts} ({len(unique_models)}<{min_models})")
 
     num_significant = len(significant_alerts)
-    logger.info(f"Found {num_significant} significant anomaly timestamps meeting consensus/persistence criteria.")
-    # Return dictionary with UTC timestamps as keys
+    logger.info(f"Found {num_significant} significant anomaly timestamps meeting minute-level persistence AND consensus criteria.")
+    # Return dictionary with precise UTC timestamps as keys
     return significant_alerts
-
 
 def send_anomaly_email(significant_anomalies: dict[pd.Timestamp, list[str]], job_name_email: str):
     """
