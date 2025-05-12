@@ -51,8 +51,10 @@ try:
 except Exception as e:
     app.logger.error(f"Error connecting to GitHub or accessing repository: {e}")
     app.logger.error("Please check your GITHUB_TOKEN and GITHUB_REPO in the .env file.")
-
-    pass 
+    # Don't exit immediately, maybe the credentials will be fixed later,
+    # but the site won't function fully.
+    # Or, if connection is critical for initial setup, re-add sys.exit(1)
+    pass # Allow app to run but GitHub parts will fail
 
 
 # --- Authentication Decorator ---
@@ -67,7 +69,7 @@ def login_required(view):
         # Check if repo was initialized successfully
         if repo is None:
              flash("GitHub repository not accessible. Please check backend logs and .env file.", "danger")
-
+             # Could redirect to a separate error page or just show the message
              return render_template('index.html', repo_name=GITHUB_REPO_NAME, branch_name=GITHUB_BRANCH, recent_commits=None, current_head_commit=None)
 
         return view(**kwargs)
@@ -129,6 +131,7 @@ def perform_rollback_to_commit(repo, target_commit_sha, branch_name):
              return False, "Target commit is already the current HEAD."
 
         # 3. Get the GitCommit object for the current HEAD to use as the parent of the new commit
+        # This is different from the Commit wrapper returned by repo.get_commit
         current_git_head_commit = repo.get_git_commit(sha=current_head_commit_sha)
         app.logger.info(f"Current HEAD GitCommit SHA for parent: {current_git_head_commit.sha}")
 
@@ -138,14 +141,15 @@ def perform_rollback_to_commit(repo, target_commit_sha, branch_name):
 
 
         # 5. Create a new Git Commit object using the correct method
-
+        # This commit will have the content of the target tree and parent(s) of the current HEAD.
         commit_message = f"Rollback: Revert branch to state of commit {target_commit_sha[:7]} via web UI"
         app.logger.info(f"Creating new Git commit with message: '{commit_message}'")
 
         new_git_commit = repo.create_git_commit(
             message=commit_message,
-            tree=target_tree, 
-            parents=[current_git_head_commit] 
+            tree=target_tree, # Pass the GitTree object
+            parents=[current_git_head_commit] # Pass a list containing the parent GitCommit object
+            # You could optionally add author/committer here using github.InputGitAuthor
         )
         app.logger.info(f"Successfully created new Git commit with SHA: {new_git_commit.sha}")
 
@@ -163,7 +167,8 @@ def perform_rollback_to_commit(repo, target_commit_sha, branch_name):
     except Exception as e:
         # Log the full error for debugging
         app.logger.error(f"Rollback Error for commit {target_commit_sha}: {e}")
-
+        # Re-raise the exception if you want Flask's debugger to catch it in debug mode
+        # raise e
         return False, f"Error during rollback: {e}"
 
 # --- Routes ---
@@ -174,13 +179,15 @@ def index():
     # repo is guaranteed to be not None by the login_required decorator check
     recent_commits = get_recent_commits(repo, GITHUB_BRANCH, count=20)
 
+    # Get the current HEAD commit separately
     current_head_commit = None
     try:
         current_head_commit = repo.get_branch(GITHUB_BRANCH).commit
     except Exception as e:
          app.logger.error(f"Error getting current HEAD for branch {GITHUB_BRANCH}: {e}")
-
-         if recent_commits is not None: 
+         # Flash message is handled inside get_recent_commits if it fails,
+         # but adding one here specifically for HEAD if needed.
+         if recent_commits is not None: # Avoid double flashing if commit fetch failed too
              flash(f"Error getting current HEAD information: {e}", "danger")
 
 
@@ -216,9 +223,9 @@ def logout():
 
 
 @app.route('/rollback', methods=['POST'])
-@login_required 
+@login_required # Protected route
 def rollback():
-
+    # repo is guaranteed to be not None by the login_required decorator check
     rollback_type = request.form.get('rollback_type')
     target_commit_sha = None
 
@@ -231,6 +238,7 @@ def rollback():
         current_head_commit_sha = current_head_commit.sha
 
         if rollback_type == 'previous':
+            # Get the parent of the current HEAD
             if not current_head_commit.parents:
                  flash("The current commit has no parents (it might be the initial commit). Cannot roll back to previous.", "warning")
                  app.logger.warning("Rollback attempt to previous failed: Initial commit has no parent.")
@@ -256,7 +264,7 @@ def rollback():
             flash(f"Attempting rollback to specific commit: {target_commit_sha[:7]}", "info")
             app.logger.info(f"Target commit determined (specific): {target_commit_sha}")
 
-            # Verify the specific commit exists before proceeding
+            # Optional: Verify the specific commit exists before proceeding
             try:
                  repo.get_commit(sha=target_commit_sha)
                  app.logger.info(f"Validated specific target commit exists: {target_commit_sha}")
@@ -292,17 +300,20 @@ def rollback():
 
 # --- Run the App ---
 if __name__ == '__main__':
-
+    # WARNING: Running with debug=True and host='0.0.0.0' is DANGEROUS
+    # for production environments. Use a production WSGI server instead.
     print("\n--- IMPORTANT SECURITY WARNING ---")
     print("Running with debug=True and host='0.0.0.0' is NOT safe for production.")
     print("This setup exposes the debugger and makes the app publicly accessible.")
     print("Use a production WSGI server (like Gunicorn) in a real deployment.")
     print("---------------------------------\n")
 
-
+    # Listen on all public interfaces (0.0.0.0) and port 5000
+    # Debug mode allows hot-reloading and detailed error pages (dangerous!)
+    # Check if repo initialization failed, if so, maybe don't run or run in a limited mode
     if repo is None:
          app.logger.error("Repository initialization failed. The app may not function correctly.")
-
-         pass 
+         # Optionally sys.exit(1) here if GitHub access is mandatory for the app to start at all
+         pass # Allowing the app to run anyway, though index route will flash an error
 
     app.run(debug=True, host='0.0.0.0', port=5000)
