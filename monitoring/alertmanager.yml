@@ -1,5 +1,5 @@
 global:
-  resolve_timeout: 1m
+  resolve_timeout: 5m
 
   # Global SMTP settings
   smtp_from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
@@ -19,7 +19,7 @@ route:
   group_by: ['alertname', 'job']
   receiver: 'email-mahdi'
   group_wait: 30s           # How long to initially wait to buffer alerts of the same group.
-  group_interval: 1m        # How long to wait before sending a notification about new alerts for a group.
+  group_interval: 5m        # How long to wait before sending a notification about new alerts for a group.
   repeat_interval: 4h       # How long to wait before re-sending a notification for an unresolved alert.
 
 receivers:
