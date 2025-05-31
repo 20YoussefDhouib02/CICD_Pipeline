@@ -4,7 +4,7 @@ groups:
       # --- Service Down Alert ---
       - alert: InstanceDown
         expr: up == 0
-        # Fire if the instance is down for 5 minutes straight
+        # Fire if the instance is down for 1 minute straight
         for: 1m
         labels:
           severity: critical

@@ -1,5 +1,5 @@
 [Unit]
-Description=GitHub Rollback Application Service
+Description= Rollback Application Service
 After=network-online.target
 Wants=network-online.target
 
