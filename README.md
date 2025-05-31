@@ -32,15 +32,15 @@ SentinelCICD is built around a layered architecture that ensures real-time insig
 </p>
 
 ### Key Layers
-- **Source & CI/CD Trigger** 
+- **Source & CI/CD Trigger**  
   Developers push code to GitHub; Jenkins pipeline is triggered via webhooks.
-- **Metrics Collection** 
+- **Metrics Collection**  
   A Spring Boot containerized backend and Jenkins jobs expose metrics, which are collected by Prometheus in Docker containers hosted on Azure.
-- **Anomaly Detection** 
+- **Anomaly Detection**  
   A Python-based service that regularly pulls Prometheus metrics and applies three machine-learning models (LSTM, Prophet, Isolation Forest) to identify abnormal patterns early.
-- **Alerting & Visualization** 
+- **Alerting & Visualization**  
   A system that routes notifications via email or webhooks, based on the results provided by AlertManager or Anomaly Detection. Grafana dashboards visualize real-time and historical metrics for pipeline health.
-- **Remediation** 
+- **Remediation**  
   Upon receiving a validated alert, the Rollback System provides the chance to fail-back procedures, by communicating with the Jenkins API to initiate the last known good build.
 
 ### Key Components
@@ -122,12 +122,12 @@ SentinelCICD is built around a layered architecture that ensures real-time insig
 ## Getting Started
 
 1. **Clone the Repository**
-2. **Configure Jenkins, Prometheus, Grafana and AlertManager, along with Environment Variables.**
+2. **Configure Jenkins, Prometheus, Grafana and AlertManager, along with Environment Variables**
 3. **Build & Deploy all services**
     1. Build the Spring Boot Backend Docker image.
     2. Run Jenkins to handle CI/CD triggers.
     3. Spin up Prometheus, Alertmanager, and Grafana.
-    4. Launch the Anomaly Detection service, along with Rollback configurations.
+    4. Launch the anomaly detection service, along with rollback configurations.
 4. **Verify Deployment & Test Functionalities**
 
 ---
