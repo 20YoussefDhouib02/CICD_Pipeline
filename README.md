@@ -5,8 +5,7 @@
         <img src="./images/SentinelCICD-logo.png" alt="SentinelCICD Logo">
     </a>
 </p>
-
-A proactive, ML-driven CI/CD monitoring and remediation framework designed to detect, alert, and rollback pipeline anomalies before they escalate.
+SentinelCICD is a proactive, ML-driven CI/CD monitoring and remediation tool designed to detect, alert, and rollback pipeline anomalies before their escalation.
 
 ---
 
@@ -33,11 +32,16 @@ SentinelCICD is built around a layered architecture that ensures real-time insig
 </p>
 
 ### Key Layers
-- **Source & CI/CD Trigger:** Developers push code to GitHub; Jenkins pipeline is triggered via webhooks.
-- **Metrics Collection:** A Spring Boot containerized backend and Jenkins jobs expose metrics, which are collected by Prometheus in Docker containers hosted on Azure.
-- **Anomaly Detection:** A Python-based service that regularly pulls Prometheus metrics and applies three machine-learning models (LSTM, Prophet, Isolation Forest) to identify abnormal patterns early.
-- **Alerting & Visualization:** A system that routes notifications via email or webhooks, based on the results provided by AlertManager or Anomaly Detection. Grafana dashboards visualize real-time and historical metrics for pipeline health.
-- **Remediation:** Upon receiving a validated alert, the Rollback System provides the chance to fail-back procedures, by communicating with the Jenkins API to initiate the last known good build.
+- **Source & CI/CD Trigger** 
+  Developers push code to GitHub; Jenkins pipeline is triggered via webhooks.
+- **Metrics Collection** 
+  A Spring Boot containerized backend and Jenkins jobs expose metrics, which are collected by Prometheus in Docker containers hosted on Azure.
+- **Anomaly Detection** 
+  A Python-based service that regularly pulls Prometheus metrics and applies three machine-learning models (LSTM, Prophet, Isolation Forest) to identify abnormal patterns early.
+- **Alerting & Visualization** 
+  A system that routes notifications via email or webhooks, based on the results provided by AlertManager or Anomaly Detection. Grafana dashboards visualize real-time and historical metrics for pipeline health.
+- **Remediation** 
+  Upon receiving a validated alert, the Rollback System provides the chance to fail-back procedures, by communicating with the Jenkins API to initiate the last known good build.
 
 ### Key Components
 - **SpringApp:** The core Backend Spring Boot service exposing custom metrics, containerized via Docker.
@@ -70,8 +74,8 @@ SentinelCICD is built around a layered architecture that ensures real-time insig
 │   ├── AnomalyDetection.py          # fetches metrics & runs ML-based anomaly detection
 │   ├── anomaly_plots/               # Sample plots illustrating detected anomalies
 │   ├── rollback/ 
-│   │   └── app.py                       # Flask web service for rollback control
-│   │   └── templates/                   # templates for rollback UI (login, history, approval)
+│   │   └── app.py                   # Flask web service for rollback control
+│   │   └── templates/               # templates for rollback UI (login, history, approval)
 ├── docker-compose.yml               # Orchestrates all services: mysql, springboot, prometheus, alertmanager, grafana, pushgateway.
 ```
 
@@ -124,7 +128,7 @@ SentinelCICD is built around a layered architecture that ensures real-time insig
     2. Run Jenkins to handle CI/CD triggers.
     3. Spin up Prometheus, Alertmanager, and Grafana.
     4. Launch the Anomaly Detection service, along with Rollback configurations.
-4. **Verify Deployment & Testing**
+4. **Verify Deployment & Test Functionalities**
 
 ---
 
@@ -147,11 +151,11 @@ We welcome contributions to enhance SentinelCICD’s monitoring, detection, and 
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
 ---
 
-## References & Resources
+## Resources
 
 You can use these resources to extend, customize, and troubleshoot your deployment:
 

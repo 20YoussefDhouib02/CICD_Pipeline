@@ -6,9 +6,6 @@ global:
   smtp_smarthost: 'smtp.mailersend.net:587'
 
   # SMTP Authentication:
-  # Username is provided via the ALERTMANAGER_SMTP_USER environment variable,
-  # which is substituted here by Alertmanager.
-  # Password is read from the specified file.
   smtp_auth_username: '${ALERTMANAGER_SMTP_USER}' # Uses environment variable
   smtp_auth_password_file: /etc/alertmanager/secrets/smtp_password # Password from file
 
