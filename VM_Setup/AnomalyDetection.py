@@ -3,12 +3,11 @@
 """
 Prometheus Time Series Anomaly Detection using LSTM, Isolation Forest, and Prophet.
 
-This script fetches specified metrics from Prometheus, trains anomaly detection
+This script fetches specified metrics within the last 30 minutes from Prometheus, trains anomaly detection
 models (LSTM Autoencoder, Isolation Forest, Prophet), identifies anomalies in
 a recent test period, generates plots for analysis, pushes detection
 metrics and anomaly markers to a Prometheus Pushgateway, and sends email
-alerts based on configurable significance rules (consensus and persistence)
-ONLY for anomalies detected within the last 30 minutes.
+alerts based on configurable significance rules (consensus and persistence).
 """
 
 # --- Core Libraries ---
@@ -138,7 +137,7 @@ EMAIL_SENDER = os.environ.get('EMAIL_SENDER', SMTP_USER) # Usually same as user 
 # Hardcoding recipient as previously requested.
 # Recommended: Use os.environ.get('EMAIL_RECIPIENTS') instead for flexibility.
 EMAIL_RECIPIENTS = "mahdi.bouafif@gmail.com"
-# logger.warning("Email recipient is hardcoded to 'mahdi.bouafif@gmail.com'. Consider using environment variable EMAIL_RECIPIENTS.")
+# logger.warning("Email recipient is hardcoded. Consider using environment variable EMAIL_RECIPIENTS.")
 
 # || Alerting Rules ||
 # Rule 1: Consensus

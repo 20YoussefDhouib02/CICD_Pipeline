@@ -1,163 +1,165 @@
-# CI/CD Pipeline for P2M Monitoring
+# SentinelCICD
 
-This repository provides a robust CI/CD pipeline configuration to automate the building, testing, and deployment of applications. The pipeline is designed to ensure faster, more reliable software delivery while maintaining high-quality standards and enabling real-time monitoring.
+<p align="center">
+    <a href="https://github.com/YoussefDhb/SentinelCICD">
+        <img src="./images/SentinelCICD-logo.png" alt="SentinelCICD Logo">
+    </a>
+</p>
+
+A proactive, ML-driven CI/CD monitoring and remediation framework designed to detect, alert, and rollback pipeline anomalies before they escalate.
+
+---
+
+## Table of Contents
+- [Project Overview](#project-overview)
+  - [Key Layers](#key-layers)
+  - [Key Components](#key-components)
+- [Folder Structure](#folder-structure)
+- [General Application Features](#general-application-features)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+- [Contributing](#contributing)
+- [License](#license)
+- [References & Resources](#references--resources)
+
+---
 
 ## Project Overview
 
-The P2M Monitoring project is structured into the following main components:
+SentinelCICD is built around a layered architecture that ensures real-time insight into pipeline health and recovery from emerging issues.
 
-1. **Backend**: Contains the core logic and APIs for the application.
-   - Built using Java with Spring Boot.
-   - Includes a `Dockerfile` for containerization.
-   - Configuration files are located in `src/main/resources`.
+<p align="center">
+    <img src="./images/Architecture.png" alt="SentinelCICD Architecture">
+</p>
 
-2. **Frontend**: Implements the user interface.
-   - Built with Angular.
-   - Key files include `angular.json`, `package.json`, and `src/index.html`.
+### Key Layers
+- **Source & CI/CD Trigger:** Developers push code to GitHub; Jenkins pipeline is triggered via webhooks.
+- **Metrics Collection:** A Spring Boot containerized backend and Jenkins jobs expose metrics, which are collected by Prometheus in Docker containers hosted on Azure.
+- **Anomaly Detection:** A Python-based service that regularly pulls Prometheus metrics and applies three machine-learning models (LSTM, Prophet, Isolation Forest) to identify abnormal patterns early.
+- **Alerting & Visualization:** A system that routes notifications via email or webhooks, based on the results provided by AlertManager or Anomaly Detection. Grafana dashboards visualize real-time and historical metrics for pipeline health.
+- **Remediation:** Upon receiving a validated alert, the Rollback System provides the chance to fail-back procedures, by communicating with the Jenkins API to initiate the last known good build.
 
-3. **Monitoring**: Provides monitoring and alerting capabilities.
-   - Uses Prometheus and Alertmanager for monitoring.
-   - Configuration files include `prometheus.yml` and `alertmanager.yml`.
+### Key Components
+- **SpringApp:** The core Backend Spring Boot service exposing custom metrics, containerized via Docker.
+- **Pushgateway:** Receives and exposes transient metrics from short-lived jobs.
+- **Prometheus:** Centralized time-series database that scrapes metrics and evaluates alert rules.
+- **Anomaly Detector:** Containerized Python service applying ML models to periodically check anomalous behavior on Prometheus data.
+- **Alerting System:** Manages and routes alerts to Email or Dashboard.
+- **Rollback System:** Flask-based service that initiates remediation via Jenkins API when anomalies are confirmed.
+- **Grafana:** Visualization tool for real-time metrics and anomaly scores.
 
-4. **VM_Setup**: Contains scripts and resources for setting up virtual machines and additional tools.
-   - Includes anomaly detection scripts, rollback tools, and project-related resources.
-
-## CI/CD Pipeline Features
-
-- **Continuous Integration**:
-  - Automated testing of code changes using unit and integration tests.
-  - Linting and static code analysis to ensure code quality.
-  - Build automation using Docker and Maven for the backend, and npm for the frontend.
-
-- **Continuous Deployment**:
-  - Deployment to staging and production environments using Docker Compose.
-  - Versioned releases for rollback support.
-  - Environment-specific configurations for seamless deployment.
-
-- **Monitoring and Alerts**:
-  - Real-time monitoring of application health using Prometheus.
-  - Alerting for critical issues using Alertmanager.
-  - Visualization of metrics and logs for debugging and performance analysis.
-
-## VM_Setup Folder Details
-
-The `VM_Setup` folder contains essential scripts and resources for setting up and managing virtual machines, as well as additional tools for anomaly detection and rollback mechanisms. Below is a detailed breakdown:
-
-- **Anomaly Detection**:
-  - `anomaly Detector script.py`: Python script for detecting anomalies in data.
-  - `OLD anomaly detector.ipynb`: Jupyter Notebook for anomaly detection experiments.
-  - `anomaly_plots/`: Contains visualizations of anomaly detection results, such as:
-    - `anomaly_detector_job_iforest_scores.png`
-    - `anomaly_detector_job_lstm_errors.png`
-    - `anomaly_detector_job_prophet_forecast.png`
-
-- **Rollback Tools**:
-  - `Github-rollback service.txt`: Configuration for automating GitHub rollbacks.
-  - `github-rollback-tool/`: Contains the rollback tool implementation:
-    - `app.py`: Main application script.
-    - `templates/`: HTML templates for the rollback tool interface.
-
-- **Project Resources**:
-  - `proj.puml`: UML diagram for project architecture.
-  - `proj/`: Contains project-related images, such as `proj.png`.
-
-## Prerequisites
-
-- Docker and Docker Compose installed.
-- Java Development Kit (JDK) for backend development.
-- Node.js and npm for frontend development.
-- Python and Jupyter Notebook for anomaly detection scripts.
-
-## Getting Started
-
-### Clone the Repository
-```bash
-git clone <repository-url>
-cd p2m_cicdmonitoring
-```
-
-### Build and Run the Application
-
-#### Using Docker Compose
-```bash
-docker-compose up --build
-```
-
-#### Manually
-
-1. **Backend**:
-   ```bash
-   cd backend
-   ./mvnw spring-boot:run
-   ```
-
-2. **Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
-
-3. **Monitoring**:
-   - Start Prometheus and Alertmanager using their respective configuration files.
-
-4. **VM_Setup**:
-   - Run the anomaly detection script:
-     ```bash
-     python VM_Setup/anomaly Detector script.py
-     ```
-   - Use the rollback tool by navigating to `github-rollback-tool/` and running:
-     ```bash
-     python app.py
-     ```
-
-## CI/CD Pipeline Workflow
-
-1. **Code Commit**:
-   - Developers push code changes to the Git repository.
-   - Triggers the CI pipeline.
-
-2. **Build and Test**:
-   - Backend: Maven builds the application and runs unit tests.
-   - Frontend: npm builds the application and runs tests.
-
-3. **Dockerization**:
-   - Docker images are built for the backend and frontend.
-   - Images are tagged with the commit hash or version number.
-
-4. **Deployment**:
-   - Docker Compose deploys the application to the staging environment.
-   - After approval, the application is deployed to production.
-
-5. **Monitoring**:
-   - Prometheus collects metrics from the application.
-   - Alertmanager sends notifications for critical issues.
+---
 
 ## Folder Structure
 
-- `backend/`: Contains the backend application code.
-- `frontend/`: Contains the frontend application code.
-- `monitoring/`: Contains monitoring configuration files.
-- `VM_Setup/`: Scripts and resources for virtual machine setup.
-- `docker-compose.yml`: Defines the services and configurations for the CI/CD pipeline.
+```text
+├── frontend/
+├── backend/
+│   ├── src/
+│   │   └── main/
+│   │       ├── java/                # Spring Boot application code (metrics endpoints, controllers)
+│   │       └── resources/           # application.properties
+│   └── Dockerfile                   # Builds the Spring Boot service into a Docker image
+│
+├── monitoring/
+│   ├── prometheus.yml               # Prometheus scrape and alert configurations
+│   ├── alertmanager.yml             # Alertmanager routing and receiver configurations
+│   └── alert.rules.yml              # Setting the Alerting rules
+│
+├── VM_Setup/
+│   ├── AnomalyDetection.py          # fetches metrics & runs ML-based anomaly detection
+│   ├── anomaly_plots/               # Sample plots illustrating detected anomalies
+│   ├── rollback/ 
+│   │   └── app.py                       # Flask web service for rollback control
+│   │   └── templates/                   # templates for rollback UI (login, history, approval)
+├── docker-compose.yml               # Orchestrates all services: mysql, springboot, prometheus, alertmanager, grafana, pushgateway.
+```
+
+---
+
+## General Application Features
+
+- **Multi-Model Anomaly Detection**
+  - Implements three complementary models:
+    - LSTM for sequential pattern analysis.
+    - Prophet for trend and seasonality modeling.
+    - Isolation Forest for statistical outlier detection.
+  - Periodically analyses metrics and detects sudden spikes, trend deviations, and statistical outliers and flags anomalous behavior.
+
+- **Proactive Alerting**
+  - Alerts fire at the earliest sign of abnormal behavior.
+  - Grafana dashboards display real-time and historical anomaly metrics.
+  - Sends detailed notifications via email or webhook.
+
+- **Rollback & Recovery**
+  - Upon anomaly validation, rollback service triggers a fail-back to the last stable release.
+  - Includes a history log for each rollback event.
+  - Supports role-based approvals.
+
+- **End-to-End Containerization**
+  - All microservices and tools run as Docker containers on Azure Cloud.
+  - Simplifies deployment and scaling.
+
+---
+
+## Prerequisites
+
+- Docker (v20.10+ recommended)
+- Docker Compose (v1.29+)
+- Java Development Kit (JDK 11 or higher)
+- Python (v3.8+)
+- Git (for cloning repository)
+
+**Optional:**
+- Azure CLI (for deploying containers to Azure)
+
+---
+
+## Getting Started
+
+1. **Clone the Repository**
+2. **Configure Jenkins, Prometheus, Grafana and AlertManager, along with Environment Variables.**
+3. **Build & Deploy all services**
+    1. Build the Spring Boot Backend Docker image.
+    2. Run Jenkins to handle CI/CD triggers.
+    3. Spin up Prometheus, Alertmanager, and Grafana.
+    4. Launch the Anomaly Detection service, along with Rollback configurations.
+4. **Verify Deployment & Testing**
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+We welcome contributions to enhance SentinelCICD’s monitoring, detection, and remediation capabilities. To contribute:
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Commit your changes and push them to your fork.
-4. Submit a pull request.
+1. Fork this repository.
+2. Create a new branch:
+
+   ```bash
+   git checkout -b feature/<your-feature-name>
+   ```
+
+3. Implement your feature or fix.
+4. Commit with a clear, descriptive message.
+5. Push to your fork and open a Pull Request.
+
+---
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License. See the LICENSE file for details.
 
-## Resources
+---
 
-- [Docker Documentation](https://docs.docker.com/)
+## References & Resources
+
+You can use these resources to extend, customize, and troubleshoot your deployment:
+
+- [Jenkins Documentation](https://www.jenkins.io/doc/book/)
 - [Prometheus Documentation](https://prometheus.io/docs/)
-- [Angular Documentation](https://angular.io/docs)
+- [Grafana Documentation](https://grafana.com/docs/)
+- [Alertmanager Documentation](https://prometheus.io/docs/alerting/latest/alertmanager/)
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Docker Documentation](https://docs.docker.com/guides/)
+- [Flask Documentation](https://flask.palletsprojects.com/)
+

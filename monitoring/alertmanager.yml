@@ -14,7 +14,7 @@ route:
   repeat_interval: 4h
 
 receivers:
-  # Receiver configuration for sending emails to mahdi.bouafif@gmail.com
+  # Receiver configuration
   - name: 'email-mahdi'
     email_configs:
       - to: 'mahdi.bouafif@gmail.com'
