@@ -1,28 +1,30 @@
 global:
-  resolve_timeout: 5m
+  resolve_timeout: 1m
+
+  # Global SMTP settings
+  smtp_from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net'
+  smtp_smarthost: 'smtp.mailersend.net:587'
+
+  # SMTP Authentication:
+  # Username is provided via the ALERTMANAGER_SMTP_USER environment variable,
+  # which is substituted here by Alertmanager.
+  # Password is read from the specified file.
+  smtp_auth_username: '${ALERTMANAGER_SMTP_USER}' # Uses environment variable
+  smtp_auth_password_file: /etc/alertmanager/secrets/smtp_password # Password from file
+
+  # Require TLS for SMTP connections. Defaults to true if not specified.
+  smtp_require_tls: true
 
 route:
-  # Group alerts primarily by alertname and job.
   group_by: ['alertname', 'job']
-
-  # Default receiver for all alerts.
   receiver: 'email-mahdi'
-
-  # Buffering and timing settings.
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 4h
+  group_wait: 30s           # How long to initially wait to buffer alerts of the same group.
+  group_interval: 1m        # How long to wait before sending a notification about new alerts for a group.
+  repeat_interval: 4h       # How long to wait before re-sending a notification for an unresolved alert.
 
 receivers:
-  # Receiver configuration
   - name: 'email-mahdi'
     email_configs:
       - to: 'mahdi.bouafif@gmail.com'
-        from: 'MS_eWsEnS@test-z0vklo667qpl7qrx.mlsender.net' 
-        smarthost: 'smtp.mailersend.net:587'
-
-        auth_username_file: /etc/alertmanager/secrets/smtp_username
-        auth_password_file: /etc/alertmanager/secrets/smtp_password
-
-        # Use TLS encryption 
-        require_tls: true
+        # This receiver will inherit SMTP settings (from, smarthost, auth, require_tls)
+        # from the 'global' section.

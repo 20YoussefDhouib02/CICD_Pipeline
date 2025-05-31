@@ -20,7 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: mahdi1/springboot-app:latest 
+    image: mahdi1/springboot-app:latest
     container_name: springboot-app
     depends_on:
       - mysql
@@ -28,7 +28,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/roadmap
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: 0000
-
     ports:
       - "8081:8081"
     restart: always
@@ -36,11 +35,10 @@ services:
       - my-network
 
   prometheus:
-    image: prom/prometheus:latest 
+    image: prom/prometheus:v2.49.1
     container_name: prometheus
     restart: always
     volumes:
-
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
       - prometheus_data:/prometheus
@@ -52,42 +50,44 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--log.level=info"
-      - "--web.enable-lifecycle" 
+      - "--web.enable-lifecycle"
 
   alertmanager:
-    image: prom/alertmanager:latest 
+    image: prom/alertmanager:v0.27.0
     container_name: alertmanager
     restart: always
     ports:
       - "9093:9093"
     volumes:
-
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - ./secrets:/etc/alertmanager/secrets:ro 
-
+      - ./secrets:/etc/alertmanager/secrets:ro # For smtp_password_file
+      - alertmanager_data:/alertmanager
+    environment: # ADDED/MODIFIED SECTION
+      # This tells Docker Compose to look for ALERTMANAGER_SMTP_USER in the
+      # environment where 'docker-compose up' is run, and pass it to the container.
+      - ALERTMANAGER_SMTP_USER
     networks:
       - my-network
     command:
       - "--config.file=/etc/alertmanager/alertmanager.yml"
       - "--log.level=info"
+      - "--storage.path=/alertmanager"
 
   grafana:
-    image: grafana/grafana:latest 
+    image: grafana/grafana:10.4.1
     container_name: grafana
     restart: always
     ports:
       - "3000:3000"
     volumes:
-
       - grafana_data:/var/lib/grafana
-
     environment:
-      pass: 
+      pass: # Add your Grafana admin password here or use environment variables/secrets
     networks:
       - my-network
 
   pushgateway:
-    image: prom/pushgateway:latest 
+    image: prom/pushgateway:v1.8.0
     container_name: pushgateway
     restart: always
     ports:
@@ -99,6 +99,7 @@ volumes:
   mysql_data:
   grafana_data:
   prometheus_data:
+  alertmanager_data:
 
 networks:
   my-network:

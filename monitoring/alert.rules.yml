@@ -5,7 +5,7 @@ groups:
       - alert: InstanceDown
         expr: up == 0
         # Fire if the instance is down for 5 minutes straight
-        for: 5m
+        for: 1m
         labels:
           severity: critical
         annotations:
